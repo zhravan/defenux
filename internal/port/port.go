@@ -19,25 +19,45 @@ type Listener struct {
 }
 
 func List() ([]Listener, error) {
-	out, err := xexec.Run("ss", "-H", "-lntp")
+	out, err := xexec.Run("ss", "-H", "-lntup")
 	if err != nil {
 		return nil, fmt.Errorf("ss: %w: %s", err, strings.TrimSpace(string(out)))
 	}
-	return parse(out)
+	return parseListeners(out)
 }
 
-func parse(data []byte) ([]Listener, error) {
+func Status(port int) ([]Listener, error) {
+	listeners, err := List()
+	if err != nil {
+		return nil, err
+	}
+	var matches []Listener
+	for _, listener := range listeners {
+		if listener.Port == port {
+			matches = append(matches, listener)
+		}
+	}
+	return matches, nil
+}
+
+func parseListeners(data []byte) ([]Listener, error) {
 	var listeners []Listener
 	s := bufio.NewScanner(bytes.NewReader(data))
 	for s.Scan() {
 		fields := strings.Fields(s.Text())
-		if len(fields) < 4 { continue }
-		address, portText := splitAddress(fields[3])
+		if len(fields) < 5 {
+			continue
+		}
+		address, portText := splitAddress(fields[4])
 		port, err := strconv.Atoi(portText)
-		if err != nil { continue }
-		l := Listener{Protocol: fields[0], Address: address, Port: port}
-		if len(fields) > 5 { l.Process, l.PID = parseProcess(fields[5:]) }
-		listeners = append(listeners, l)
+		if err != nil {
+			continue
+		}
+		listener := Listener{Protocol: fields[0], Address: address, Port: port}
+		if len(fields) > 6 {
+			listener.Process, listener.PID = parseProcess(fields[6:])
+		}
+		listeners = append(listeners, listener)
 	}
 	return listeners, s.Err()
 }
@@ -53,7 +73,9 @@ func parseProcess(fields []string) (string, int) {
 	joined := strings.Join(fields, " ")
 	if i := strings.Index(joined, "pid="); i >= 0 {
 		rest := joined[i+4:]
-		if end := strings.IndexAny(rest, ",)"); end >= 0 { rest = rest[:end] }
+		if end := strings.IndexAny(rest, ",)"); end >= 0 {
+			rest = rest[:end]
+		}
 		pid, _ := strconv.Atoi(rest)
 		return joined, pid
 	}
