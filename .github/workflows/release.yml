@@ -1,0 +1,87 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.0"
+          cache: true
+          check-latest: true
+
+      - name: Verify Go
+        run: |
+          go version
+          test "$(go env GOVERSION)" = "go1.25.0"
+
+      - name: Install Linux networking tools
+        run: sudo apt-get update && sudo apt-get install -y iproute2
+
+      - name: Build test binary
+        run: go build -o defenux .
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build Linux releases
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -eu
+
+          VERSION="${TAG#v}"
+          mkdir -p dist
+
+          build() {
+            name="$1"
+            arch="$2"
+            arm="${3:-}"
+
+            if [ -n "$arm" ]; then
+              GOARM="$arm" GOOS=linux GOARCH="$arch" CGO_ENABLED=0 \
+                go build -trimpath -buildvcs=false \
+                -ldflags="-s -w -X github.com/zhravan/defenux/cmd.version=$VERSION" \
+                -o "dist/defenux" .
+            else
+              GOOS=linux GOARCH="$arch" CGO_ENABLED=0 \
+                go build -trimpath -buildvcs=false \
+                -ldflags="-s -w -X github.com/zhravan/defenux/cmd.version=$VERSION" \
+                -o "dist/defenux" .
+            fi
+
+            tar -C dist -czf "../defenux_linux_$name.tar.gz" defenux
+            mv "../defenux_linux_$name.tar.gz" "dist/defenux_linux_$name.tar.gz"
+            rm dist/defenux
+          }
+
+          build amd64 amd64
+          build arm64 arm64
+          build armv6 arm 6
+          build armv7 arm 7
+          build 386 386
+          build ppc64le ppc64le
+          build s390x s390x
+          build riscv64 riscv64
+          build loong64 loong64
+
+          sha256sum dist/*.tar.gz > dist/sha256sums.txt
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*.tar.gz
+            dist/sha256sums.txt
