@@ -5,7 +5,9 @@ package e2e
 import (
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -20,7 +22,13 @@ func TestPortInspection(t *testing.T) {
 	port := ln.Addr().(*net.TCPAddr).Port
 	portText := fmt.Sprintf("%d", port)
 
-	cmd := exec.Command("./defenux", "port", "status", portText)
+	root, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(root, "..", "defenux")
+
+	cmd := exec.Command(binary, "port", "status", portText)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("defenux failed: %v: %s", err, out)
