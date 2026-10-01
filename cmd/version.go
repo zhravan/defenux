@@ -2,7 +2,7 @@ package cmd
 
 import "github.com/spf13/cobra"
 
-var version = "dev"
+var version = "0.0.3"
 
 func init() {
 	rootCmd.AddCommand(&cobra.Command{
