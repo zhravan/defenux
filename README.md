@@ -38,6 +38,8 @@ Supported Linux architectures:
     defenux firewall list
     defenux firewall allow 22/tcp
     defenux firewall deny 23/tcp
+    defenux ssh status
+    defenux ssh config
 
 ## Development
 
