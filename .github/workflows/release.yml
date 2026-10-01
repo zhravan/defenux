@@ -2,8 +2,8 @@ name: release
 
 on:
   push:
-    tags:
-      - "v*.*.*"
+    branches:
+      - "release/v0.0.2"
 
 permissions:
   contents: write
@@ -14,6 +14,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: a9a25892b041cf862e9ef73350651172417e4929
 
       - uses: actions/setup-go@v6
         with:
@@ -35,13 +37,14 @@ jobs:
       - name: Test
         run: go test ./...
 
+      - name: E2E
+        run: go test -v ./e2e
+
       - name: Build Linux releases
-        env:
-          TAG: ${{ github.ref_name }}
         run: |
           set -eu
 
-          VERSION="${TAG#v}"
+          VERSION=0.0.2
           mkdir -p dist
 
           build() {
@@ -81,6 +84,9 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: v0.0.2
+          target_commitish: a9a25892b041cf862e9ef73350651172417e4929
+          name: v0.0.2
           generate_release_notes: true
           files: |
             dist/*.tar.gz
