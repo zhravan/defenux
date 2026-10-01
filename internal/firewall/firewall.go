@@ -43,6 +43,7 @@ func Detect() Backend {
 
 func Status() (Info, error) {
 	backend := Detect()
+
 	switch backend {
 	case None:
 		return Info{Backend: None, State: "inactive"}, nil
@@ -132,14 +133,17 @@ func ParseSpec(value string) (int, string, error) {
 	if len(parts) != 2 {
 		return 0, "", fmt.Errorf("invalid rule: %s (use PORT/PROTOCOL)", value)
 	}
+
 	port, err := strconv.Atoi(parts[0])
 	if err != nil || port < 1 || port > 65535 {
 		return 0, "", fmt.Errorf("invalid port: %s", parts[0])
 	}
+
 	protocol := strings.ToLower(parts[1])
 	if protocol != "tcp" && protocol != "udp" {
 		return 0, "", fmt.Errorf("invalid protocol: %s", parts[1])
 	}
+
 	return port, protocol, nil
 }
 
@@ -148,25 +152,38 @@ func rule(action string, port int, protocol string) error {
 	case UFW:
 		_, err := xexec.Run("ufw", action, fmt.Sprintf("%d/%s", port, protocol))
 		return err
+
 	case Firewalld:
 		spec := fmt.Sprintf("%d/%s", port, protocol)
-		flag := "--add-port"
+		args := []string{"--permanent", "--add-port", spec}
+
 		if action == "deny" {
-			flag = "--add-rich-rule"
 			spec = fmt.Sprintf("rule port port="%d" protocol="%s" drop", port, protocol)
+			args = []string{"--permanent", "--add-rich-rule", spec}
 		}
-		if _, err := xexec.Run("firewall-cmd", "--permanent", flag, spec); err != nil {
+
+		if _, err := xexec.Run("firewall-cmd", args...); err != nil {
 			return err
 		}
+
 		_, err := xexec.Run("firewall-cmd", "--reload")
 		return err
+
 	case Iptables:
 		target := "ACCEPT"
 		if action == "deny" {
 			target = "DROP"
 		}
-		_, err := xexec.Run("iptables", "-I", "INPUT", "-p", protocol, "--dport", strconv.Itoa(port), "-j", target)
+
+		_, err := xexec.Run(
+			"iptables",
+			"-I", "INPUT",
+			"-p", protocol,
+			"--dport", strconv.Itoa(port),
+			"-j", target,
+		)
 		return err
+
 	default:
 		return fmt.Errorf("firewall rule control is unsupported for backend %s", backend)
 	}
@@ -181,8 +198,7 @@ func run(name string, args ...string) (string, error) {
 }
 
 func parseUFWStatus(data []byte) string {
-	for _, item := range strings.Split(string(data), "
-") {
+	for _, item := range strings.Split(string(data), "\n") {
 		item = strings.TrimSpace(item)
 		if strings.EqualFold(item, "Status: active") {
 			return "active"
