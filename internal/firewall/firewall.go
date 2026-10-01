@@ -79,8 +79,7 @@ func Status() (Info, error) {
 func List() (string, error) {
 	switch backend := Detect(); backend {
 	case None:
-		return "no firewall detected
-", nil
+		return fmt.Sprintln("no firewall detected"), nil
 	case UFW:
 		return run("ufw", "status", "verbose")
 	case Firewalld:
@@ -141,7 +140,7 @@ func ParseSpec(value string) (int, string, error) {
 
 	protocol := strings.ToLower(parts[1])
 	if protocol != "tcp" && protocol != "udp" {
-		return 0, "", fmt.Errorf("invalid protocol: %s", parts[1])
+		return 0, "", fmt.Errorf("invalid protocol: %s", protocol)
 	}
 
 	return port, protocol, nil
@@ -152,13 +151,12 @@ func rule(action string, port int, protocol string) error {
 	case UFW:
 		_, err := xexec.Run("ufw", action, fmt.Sprintf("%d/%s", port, protocol))
 		return err
-
 	case Firewalld:
 		spec := fmt.Sprintf("%d/%s", port, protocol)
 		args := []string{"--permanent", "--add-port", spec}
 
 		if action == "deny" {
-			spec = fmt.Sprintf("rule port port="%d" protocol="%s" drop", port, protocol)
+			spec = fmt.Sprintf("rule port port=%q protocol=%q drop", strconv.Itoa(port), protocol)
 			args = []string{"--permanent", "--add-rich-rule", spec}
 		}
 
@@ -168,7 +166,6 @@ func rule(action string, port int, protocol string) error {
 
 		_, err := xexec.Run("firewall-cmd", "--reload")
 		return err
-
 	case Iptables:
 		target := "ACCEPT"
 		if action == "deny" {
@@ -183,7 +180,6 @@ func rule(action string, port int, protocol string) error {
 			"-j", target,
 		)
 		return err
-
 	default:
 		return fmt.Errorf("firewall rule control is unsupported for backend %s", backend)
 	}
@@ -198,14 +194,12 @@ func run(name string, args ...string) (string, error) {
 }
 
 func parseUFWStatus(data []byte) string {
-	for _, item := range strings.Split(string(data), "\n") {
-		item = strings.TrimSpace(item)
-		if strings.EqualFold(item, "Status: active") {
-			return "active"
-		}
-		if strings.EqualFold(item, "Status: inactive") {
-			return "inactive"
-		}
+	status := strings.ToLower(string(data))
+	if strings.Contains(status, "status: active") {
+		return "active"
+	}
+	if strings.Contains(status, "status: inactive") {
+		return "inactive"
 	}
 	return "unknown"
 }
