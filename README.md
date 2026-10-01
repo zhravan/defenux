@@ -34,6 +34,10 @@ Supported Linux architectures:
     defenux port status 8000
     defenux network interfaces
     defenux network routes
+    defenux firewall status
+    defenux firewall list
+    defenux firewall allow 22/tcp
+    defenux firewall deny 23/tcp
 
 ## Development
 
