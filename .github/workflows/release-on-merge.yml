@@ -1,0 +1,52 @@
+name: release on merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Calculate next patch version
+        id: version
+        run: |
+          set -eu
+
+          latest="$(git tag --sort=-version:refname | head -n 1)"
+          latest="${latest#v}"
+
+          IFS=. read -r major minor patch <<EOF
+          $latest
+          EOF
+
+          next="v${major}.${minor}.$((patch + 1))"
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Tag merge commit
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -eu
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "tag $TAG already exists" >&2
+            exit 1
+          fi
+
+          git tag "$TAG" "$MERGE_SHA"
+          git push origin "$TAG"
