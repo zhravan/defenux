@@ -102,9 +102,15 @@ jobs:
             arm="${3:-}"
 
             if [ -n "$arm" ]; then
-              GOARM="$arm" GOOS=linux GOARCH="$arch" CGO_ENABLED=0                 go build -trimpath -buildvcs=false                 -ldflags="-s -w -X github.com/zhravan/defenux/cmd.version=$VERSION"                 -o "dist/defenux" .
+              GOARM="$arm" GOOS=linux GOARCH="$arch" CGO_ENABLED=0 \
+                go build -trimpath -buildvcs=false \
+                -ldflags="-s -w -X github.com/zhravan/defenux/cmd.version=$VERSION" \
+                -o "dist/defenux" .
             else
-              GOOS=linux GOARCH="$arch" CGO_ENABLED=0                 go build -trimpath -buildvcs=false                 -ldflags="-s -w -X github.com/zhravan/defenux/cmd.version=$VERSION"                 -o "dist/defenux" .
+              GOOS=linux GOARCH="$arch" CGO_ENABLED=0 \
+                go build -trimpath -buildvcs=false \
+                -ldflags="-s -w -X github.com/zhravan/defenux/cmd.version=$VERSION" \
+                -o "dist/defenux" .
             fi
 
             tar -C dist -czf "../defenux_linux_$name.tar.gz" defenux
@@ -128,7 +134,6 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.TAG }}
-          target_commitish: ${{ env.REF }}
           generate_release_notes: true
           files: |
             dist/*.tar.gz
