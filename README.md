@@ -10,7 +10,7 @@ Latest Linux release:
 
 Install a specific version:
 
-    DEFENUX_VERSION=0.0.3 curl -fsSL https://raw.githubusercontent.com/zhravan/defenux/main/install.sh | sh
+    DEFENUX_VERSION=0.0.5 curl -fsSL https://raw.githubusercontent.com/zhravan/defenux/main/install.sh | sh
 
 The installer detects the Linux CPU architecture, downloads the matching static
 binary from GitHub Releases, verifies its SHA-256 checksum, and installs it to
@@ -55,7 +55,7 @@ Test:
 
     go test ./...
 
-Source builds report the version from cmd/version.go.
+Source builds use cmd/version.txt.
 Release builds embed the Git tag version.
 
 The 0.1.0 release will cover port/network inspection, firewall control,

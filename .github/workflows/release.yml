@@ -13,6 +13,14 @@ on:
       ref:
         required: true
         type: string
+      skip_tests:
+        required: false
+        default: false
+        type: boolean
+      verify_version:
+        required: false
+        default: true
+        type: boolean
 
   workflow_dispatch:
     inputs:
@@ -24,6 +32,16 @@ on:
         description: Commit or tag to build from
         required: true
         type: string
+      skip_tests:
+        description: Skip tests for a historical release backfill
+        required: false
+        default: false
+        type: boolean
+      verify_version:
+        description: Require cmd/version.txt to match the tag
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -56,10 +74,19 @@ jobs:
       - name: Install Linux networking tools
         run: sudo apt-get update && sudo apt-get install -y iproute2
 
+      - name: Verify version
+        if: ${{ inputs.verify_version != false }}
+        run: |
+          set -eu
+          VERSION="$(tr -d '[:space:]' < cmd/version.txt)"
+          TAG_VERSION="${TAG#v}"
+          test "$VERSION" = "$TAG_VERSION"
+
       - name: Build test binary
         run: go build -o defenux .
 
       - name: Test
+        if: ${{ inputs.skip_tests != true }}
         run: go test ./...
 
       - name: Build Linux releases

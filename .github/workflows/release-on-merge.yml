@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  tag:
+  release:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-24.04
     outputs:
@@ -19,26 +19,40 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
 
-      - name: Calculate next patch version
+      - name: Calculate release version
         id: version
         run: |
           set -eu
 
           latest="$(git tag --sort=-version:refname | head -n 1)"
+          version="$(tr -d '[:space:]' < cmd/version.txt)"
+          tag="v$version"
+
           if [ -z "$latest" ]; then
             latest="v0.0.0"
           fi
-          latest="${latest#v}"
+
+          latest_version="${latest#v}"
 
           IFS=. read -r major minor patch <<EOF
-          $latest
+          $latest_version
           EOF
 
-          next="v${major}.${minor}.$((patch + 1))"
-          echo "tag=$next" >> "$GITHUB_OUTPUT"
+          expected="v${major}.${minor}.$((patch + 1))"
+
+          test "$tag" = "$expected"
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "ref=${{ github.event.pull_request.merge_commit_sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Build test binary
+        run: go build -o defenux .
+
+      - name: Test
+        run: go test ./...
 
       - name: Tag merge commit
         env:
@@ -58,12 +72,13 @@ jobs:
           git tag "$TAG" "$MERGE_SHA"
           git push origin "$TAG"
 
-  release:
-    if: github.event.pull_request.merged == true
-    needs: tag
+  publish:
+    needs: release
     uses: ./.github/workflows/release.yml
     with:
-      tag: ${{ needs.tag.outputs.tag }}
-      ref: ${{ needs.tag.outputs.ref }}
+      tag: ${{ needs.release.outputs.tag }}
+      ref: ${{ needs.release.outputs.ref }}
+      skip_tests: true
+      verify_version: true
     permissions:
       contents: write

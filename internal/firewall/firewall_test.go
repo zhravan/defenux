@@ -3,23 +3,19 @@ package firewall
 import "testing"
 
 func TestParseUFWStatus(t *testing.T) {
-	if got := parseUFWStatus([]byte("Status: active
-")); got != "active" {
+	if got := parseUFWStatus([]byte("Status: active\n")); got != "active" {
 		t.Fatalf("got %q", got)
 	}
-	if got := parseUFWStatus([]byte("Status: inactive
-")); got != "inactive" {
+	if got := parseUFWStatus([]byte("Status: inactive\n")); got != "inactive" {
 		t.Fatalf("got %q", got)
 	}
 }
 
 func TestParseState(t *testing.T) {
-	if got := parseState([]byte("running
-")); got != "active" {
+	if got := parseState([]byte("running\n")); got != "active" {
 		t.Fatalf("got %q", got)
 	}
-	if got := parseState([]byte("not running
-")); got != "inactive" {
+	if got := parseState([]byte("not running\n")); got != "inactive" {
 		t.Fatalf("got %q", got)
 	}
 }

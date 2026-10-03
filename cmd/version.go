@@ -1,8 +1,17 @@
 package cmd
 
-import "github.com/spf13/cobra"
+import (
+	_ "embed"
+	"strings"
 
-var version = "0.0.3"
+	"github.com/spf13/cobra"
+)
+
+var (
+	//go:embed version.txt
+	versionFile string
+	version     = strings.TrimSpace(versionFile)
+)
 
 func init() {
 	rootCmd.AddCommand(&cobra.Command{
