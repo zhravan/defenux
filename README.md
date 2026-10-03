@@ -10,7 +10,7 @@ Latest Linux release:
 
 Install a specific version:
 
-    DEFENUX_VERSION=0.0.2 curl -fsSL https://raw.githubusercontent.com/zhravan/defenux/main/install.sh | sh
+    DEFENUX_VERSION=0.0.3 curl -fsSL https://raw.githubusercontent.com/zhravan/defenux/main/install.sh | sh
 
 The installer detects the Linux CPU architecture, downloads the matching static
 binary from GitHub Releases, verifies its SHA-256 checksum, and installs it to
@@ -40,6 +40,8 @@ Supported Linux architectures:
     defenux firewall deny 23/tcp
     defenux ssh status
     defenux ssh config
+    defenux service list
+    defenux service status ssh.service
 
 ## Development
 
@@ -51,7 +53,8 @@ Test:
 
     go test ./...
 
-Source builds report dev. Release builds embed the Git tag version.
+Source builds report the version from cmd/version.go.
+Release builds embed the Git tag version.
 
 The 0.1.0 release will cover port/network inspection, firewall control,
 SSH and service hardening, kernel/user/filesystem auditing, and unified
