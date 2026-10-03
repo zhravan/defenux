@@ -42,7 +42,6 @@ jobs:
           EOF
 
           expected="v${major}.${minor}.$((patch + 1))"
-
           test "$tag" = "$expected"
 
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
