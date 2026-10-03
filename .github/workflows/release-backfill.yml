@@ -1,0 +1,54 @@
+name: release backfill
+
+on:
+  push:
+    branches: [main]
+
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  find:
+    runs-on: ubuntu-24.04
+    outputs:
+      tags: ${{ steps.missing.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Find missing releases
+        id: missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+
+          tags="$(
+            git tag --list 'v*.*.*' --sort=version:refname |
+            while read -r tag; do
+              if ! gh release view "$tag" >/dev/null 2>&1; then
+                printf '%s\n' "$tag"
+              fi
+            done |
+            jq -R -s -c 'split("\n") | map(select(length > 0))'
+          )"
+
+          echo "tags=$tags" >> "$GITHUB_OUTPUT"
+
+  backfill:
+    needs: find
+    if: needs.find.outputs.tags != '[]'
+    strategy:
+      matrix:
+        tag: ${{ fromJSON(needs.find.outputs.tags) }}
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ matrix.tag }}
+      ref: ${{ matrix.tag }}
+      skip_tests: true
+      verify_version: false
+    permissions:
+      contents: write
