@@ -42,6 +42,8 @@ Supported Linux architectures:
     defenux ssh config
     defenux service list
     defenux service status ssh.service
+    defenux user list
+    defenux user status root
 
 ## Development
 
