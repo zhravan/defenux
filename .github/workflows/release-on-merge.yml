@@ -12,6 +12,9 @@ jobs:
   tag:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      ref: ${{ steps.version.outputs.ref }}
 
     steps:
       - uses: actions/checkout@v6
@@ -24,6 +27,9 @@ jobs:
           set -eu
 
           latest="$(git tag --sort=-version:refname | head -n 1)"
+          if [ -z "$latest" ]; then
+            latest="v0.0.0"
+          fi
           latest="${latest#v}"
 
           IFS=. read -r major minor patch <<EOF
@@ -32,11 +38,12 @@ jobs:
 
           next="v${major}.${minor}.$((patch + 1))"
           echo "tag=$next" >> "$GITHUB_OUTPUT"
+          echo "ref=${{ github.event.pull_request.merge_commit_sha }}" >> "$GITHUB_OUTPUT"
 
       - name: Tag merge commit
         env:
           TAG: ${{ steps.version.outputs.tag }}
-          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          MERGE_SHA: ${{ steps.version.outputs.ref }}
         run: |
           set -eu
 
@@ -50,3 +57,13 @@ jobs:
 
           git tag "$TAG" "$MERGE_SHA"
           git push origin "$TAG"
+
+  release:
+    if: github.event.pull_request.merged == true
+    needs: tag
+    uses: ./.github/workflows/release.yml
+    with:
+      tag: ${{ needs.tag.outputs.tag }}
+      ref: ${{ needs.tag.outputs.ref }}
+    permissions:
+      contents: write
